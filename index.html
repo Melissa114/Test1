@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Géolocalisation et Météo</title>
+</head>
+<body>
+    <h1>Géolocalisation & Météo</h1>
+    <button onclick="getLocation()">Obtenir ma position et la météo</button>
+    <p id="position"></p>
+    <p id="weather"></p>
+    <p id="season"></p> <!-- Ajout de l'affichage de la saison -->
+
+    <script>
+        const API_KEY = "573df8eb65077b5957de5861a32b9631"; // Remplace par ta clé API OpenWeatherMap
+
+        function getLocation() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    async (position) => {
+                        let lat = position.coords.latitude;
+                        let lon = position.coords.longitude;
+
+                        // Récupérer le nom du lieu exact (ville, wilaya, pays)
+                        let locationName = await getLocationName(lat, lon);
+                        document.getElementById("position").innerText = 
+                            `Latitude: ${lat}, Longitude: ${lon}\nLieu: ${locationName}`;
+
+                        // Récupérer les données météorologiques
+                        let weatherData = await getWeather(lat, lon);
+                        document.getElementById("weather").innerText = weatherData;
+
+                        // Déterminer la saison actuelle
+                        let season = getSeason(lat);
+                        document.getElementById("season").innerText = `Saison: ${season}`;
+                    },
+                    (error) => {
+                        console.error("Erreur de géolocalisation: ", error.message);
+                    }
+                );
+            } else {
+                console.log("La géolocalisation n'est pas supportée par ce navigateur.");
+            }
+        }
+
+        // Fonction pour récupérer le nom du lieu avec OpenStreetMap (Nominatim)
+        async function getLocationName(lat, lon) {
+            try {
+                let response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=fr`);
+                let data = await response.json();
+                
+                if (data && data.address) {
+                    return `${data.address.city || data.address.town || data.address.village}, ${data.address.state}, ${data.address.country}`;
+                } else {
+                    return "Lieu inconnu";
+                }
+            } catch (error) {
+                console.error("Erreur lors de la récupération du nom du lieu :", error);
+                return "Erreur";
+            }
+        }
+
+        async function getWeather(lat, lon) {
+    try {
+        let response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric&lang=fr`);
+        let data = await response.json();
+
+        console.log("Données OpenWeatherMap:", data); // Vérifie la réponse de l'API
+
+        if (data && data.weather) {
+            let description = data.weather[0].description;
+            let temperature = data.main.temp;
+            return `Météo: ${description}, Température: ${temperature}°C`;
+        } else {
+            return "Données météo indisponibles";
+        }
+    } catch (error) {
+        console.error("Erreur lors de la récupération des données météo :", error);
+        return "Erreur";
+    }
+}
+
+
+        // Fonction pour déterminer la saison en fonction de la latitude et du mois actuel
+        function getSeason(lat) {
+            let month = new Date().getMonth() + 1; // Mois actuel (1 = Janvier, 12 = Décembre)
+
+            if (lat >= 0) { // Hémisphère Nord (ex: Algérie, France)
+                if (month >= 3 && month <= 5) return "Printemps 🌸";
+                if (month >= 6 && month <= 8) return "Été ☀️";
+                if (month >= 9 && month <= 11) return "Automne 🍂";
+                return "Hiver ❄️"; // Décembre - Février
+            } else { // Hémisphère Sud (ex: Brésil, Australie)
+                if (month >= 3 && month <= 5) return "Automne 🍂";
+                if (month >= 6 && month <= 8) return "Hiver ❄️";
+                if (month >= 9 && month <= 11) return "Printemps 🌸";
+                return "Été ☀️"; // Décembre - Février
+            }
+        }
+    </script>
+</body>
+</html>
